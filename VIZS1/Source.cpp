@@ -4,104 +4,66 @@
 * @author OpenCV team
 */
 
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui/highgui.hpp"
-#include <stdlib.h>
-#include <stdio.h>
+#include "opencv2/imgproc/imgproc.hpp"
+
+#include <iostream>
 
 using namespace cv;
+using namespace std;
 
-/// Global variables
-Mat src, erosion_dst, dilation_dst;
-
-int erosion_elem = 0;
-int erosion_size = 0;
-int dilation_elem = 0;
-int dilation_size = 0;
-int const max_elem = 2;
-int const max_kernel_size = 21;
-
-/** Function Headers */
-void Erosion(int, void*);
-void Dilation(int, void*);
-
-/**
-* @function main
-*/
-int main(int, char** argv)
+void help()
 {
-	/// Load an image
-	src = imread(argv[1]);
+	cout << "\nThis program demonstrates line finding with the Hough transform.\n"
+		"Usage:\n"
+		"./houghlines <image_name>, Default is pic1.jpg\n" << endl;
+}
 
+int main(int argc, char** argv)
+{
+	const char* filename = argc >= 2 ? argv[1] : "pic1.jpg";
+
+	Mat src = imread(filename, 0);
 	if (src.empty())
 	{
+		help();
+		cout << "can not open " << filename << endl;
 		return -1;
 	}
 
-	/// Create windows
-	namedWindow("Erosion Demo", WINDOW_AUTOSIZE);
-	namedWindow("Dilation Demo", WINDOW_AUTOSIZE);
-	moveWindow("Dilation Demo", src.cols, 0);
+	Mat dst, cdst;
+	Canny(src, dst, 50, 200, 3);
+	cvtColor(dst, cdst, CV_GRAY2BGR);
 
-	/// Create Erosion Trackbar
-	createTrackbar("Element:\n 0: Rect \n 1: Cross \n 2: Ellipse", "Erosion Demo",
-		&erosion_elem, max_elem,
-		Erosion);
+#if 0
+	vector<Vec2f> lines;
+	HoughLines(dst, lines, 1, CV_PI / 180, 100, 0, 0);
 
-	createTrackbar("Kernel size:\n 2n +1", "Erosion Demo",
-		&erosion_size, max_kernel_size,
-		Erosion);
+	for (size_t i = 0; i < lines.size(); i++)
+	{
+		float rho = lines[i][0], theta = lines[i][1];
+		Point pt1, pt2;
+		double a = cos(theta), b = sin(theta);
+		double x0 = a*rho, y0 = b*rho;
+		pt1.x = cvRound(x0 + 1000 * (-b));
+		pt1.y = cvRound(y0 + 1000 * (a));
+		pt2.x = cvRound(x0 - 1000 * (-b));
+		pt2.y = cvRound(y0 - 1000 * (a));
+		line(cdst, pt1, pt2, Scalar(0, 0, 255), 3, CV_AA);
+	}
+#else
+	vector<Vec4i> lines;
+	HoughLinesP(dst, lines, 1, CV_PI / 180, 50, 50, 10);
+	for (size_t i = 0; i < lines.size(); i++)
+	{
+		Vec4i l = lines[i];
+		line(cdst, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(0, 0, 255), 3, CV_AA);
+	}
+#endif
+	imshow("source", src);
+	imshow("detected lines", cdst);
 
-	/// Create Dilation Trackbar
-	createTrackbar("Element:\n 0: Rect \n 1: Cross \n 2: Ellipse", "Dilation Demo",
-		&dilation_elem, max_elem,
-		Dilation);
+	waitKey();
 
-	createTrackbar("Kernel size:\n 2n +1", "Dilation Demo",
-		&dilation_size, max_kernel_size,
-		Dilation);
-
-	/// Default start
-	Erosion(0, 0);
-	Dilation(0, 0);
-
-	waitKey(0);
 	return 0;
-}
-
-/**
-* @function Erosion
-*/
-void Erosion(int, void*)
-{
-	int erosion_type = 0;
-	if (erosion_elem == 0) { erosion_type = MORPH_RECT; }
-	else if (erosion_elem == 1) { erosion_type = MORPH_CROSS; }
-	else if (erosion_elem == 2) { erosion_type = MORPH_ELLIPSE; }
-
-	Mat element = getStructuringElement(erosion_type,
-		Size(2 * erosion_size + 1, 2 * erosion_size + 1),
-		Point(erosion_size, erosion_size));
-	/// Apply the erosion operation
-	erode(src, erosion_dst, element);
-	imshow("Erosion Demo", erosion_dst);
-}
-
-/**
-* @function Dilation
-*/
-void Dilation(int, void*)
-{
-	int dilation_type = 0;
-	if (dilation_elem == 0) { dilation_type = MORPH_RECT; }
-	else if (dilation_elem == 1) { dilation_type = MORPH_CROSS; }
-	else if (dilation_elem == 2) { dilation_type = MORPH_ELLIPSE; }
-
-	Mat element = getStructuringElement(dilation_type,
-		Size(2 * dilation_size + 1, 2 * dilation_size + 1),
-		Point(dilation_size, dilation_size));
-	/// Apply the dilation operation
-	dilate(src, dilation_dst, element);
-	imshow("Dilation Demo", dilation_dst);
 }
