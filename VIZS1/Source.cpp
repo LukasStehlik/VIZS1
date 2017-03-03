@@ -14,7 +14,7 @@ using namespace std;
 
 int main(int argc, char** argv)
 {
-	Mat src = imread("../Data/kruh2.bmp",IMREAD_UNCHANGED);
+	Mat src = imread("../Data/kruhy.bmp",IMREAD_UNCHANGED);
 	if (src.empty())
 	{
 		cout << "can not open ";
@@ -22,20 +22,20 @@ int main(int argc, char** argv)
 	}
 
 	Mat dst, HoughSource, HSV_Image;
-	GaussianBlur(src, dst, Size(7, 7), 0, 0); //Rozmazáva hrany
-	medianBlur(dst, dst, 29);
+	GaussianBlur(src, dst, Size(3, 3), 0, 0); //Rozmazáva hrany
+	medianBlur(dst, dst, 25);
 	cvtColor(dst, HSV_Image, CV_RGB2HSV);
-
+	//imshow("HSV", HSV_Image);
+	
 	//imshow("Original", src);
 	//imshow("Gauss",dst);
-	//imshow("Gaus+Median", dst);
+	imshow("Gaus+Median", dst);
 	//Canny(dst, Keny, 50, 200, 3);
 	//imshow("Canny", Keny);
 
 	vector<Vec3f> circles;
 	cvtColor(dst, HoughSource, CV_RGB2GRAY);
-	cout << "Bullshit" << endl;
-	HoughCircles(HoughSource, circles, HOUGH_GRADIENT, 1, HoughSource.rows / 4, 200, 100);
+	HoughCircles(HoughSource, circles, HOUGH_GRADIENT, 2, HoughSource.rows / 4, 200, 100, 0, 0);
 
 	printf("Pocet kruhov: %u\n", (uint16_t)circles.size());
 
@@ -47,32 +47,59 @@ int main(int argc, char** argv)
 		
 		printf("x=%i y=%i\n", center.x, center.y);
 
-		uint meanH = 0;
-		uint meanS = 0;
-		uint meanV = 0;
+		uint64_t meanH = 0;
+		uint64_t meanS = 0;
+		uint64_t meanV = 0;
 		Vec3b hsv;
 
-		for (int j = (center.x - radius / 2); j < (center.x + radius / 2); j++)
+		for (int x = (center.x - radius / 2); x < (center.x + radius / 2); x++)
 		{
-			hsv = HSV_Image.at<Vec3b>(j, center.y);
-			meanH += hsv.val[0];
-			meanS += hsv.val[1];
-			meanV += hsv.val[2];
+			for (int y = (center.y - radius / 2); y < (center.y + radius / 2); y++)
+			{
+				hsv = HSV_Image.at<Vec3b>(y, x);
+				meanH += hsv.val[0];
+				meanS += hsv.val[1];
+				meanV += hsv.val[2];
+				//line(src, Point(x, y), Point(x, y), hsv);
+			}
 		}
 
-		uint H = meanH / radius;
-		uint S = meanS / radius;
-		uint V = meanV / radius;
-		printf("H=%u S=%u V=%u\n", H * 2, S, V);
+		uint H = (uint)meanH / (radius*radius);
+		uint S = (uint)meanS / (radius*radius);
+		uint V = (uint)meanV / (radius*radius);
+		printf("H=%u S=%u V=%u\n", H, S, V);
 
-		Mat someColor = Mat(1, 1, CV_8UC3, Scalar(H , S, V));
-		cvtColor(someColor, someColor, COLOR_HSV2RGB);
+		Mat someColor = Mat(1, 1, CV_8UC3, Scalar(H, S, V));
+		cvtColor(someColor, someColor, CV_HSV2RGB);
 		Scalar rgb = someColor.at<Vec3b>(0, 0);
+
+		String txtColor;
+		if (H > 100 && H < 140) txtColor = "RCircle";
+		if (H > 30 && H < 99) txtColor = "GCircle";
+		if (H < 29 || H > 150) txtColor = "BCircle";
 
 		// draw the circle outline
 		circle(src, center, radius, rgb, 3, 8, 0);
-		putText(src, "Kruh", center, FONT_HERSHEY_PLAIN, 2, Scalar(0, 255, 255), 2);
+		putText(src, txtColor, center, FONT_HERSHEY_PLAIN, 2, Scalar(0, 255, 255), 2);
 	}
+	//Red H->100:140
+	//Green H->30:99
+	//Blue H->0:29 & 150:180
+	/*for (int x = 0; x <= 180; x++)
+	{
+		Mat someColor = Mat(1, 1, CV_8UC3, Scalar(x, 255, 255));
+		cvtColor(someColor, someColor, CV_HSV2RGB);
+		Scalar rgb = someColor.at<Vec3b>(0, 0);
+		line(src, Point(x, 0), Point(x, 9), rgb);
+	}
+	for (int x = 0; x <= 85; x++)
+	{
+		Mat someColor = Mat(1, 1, CV_8UC3, Scalar(x+180, 255, 255));
+		cvtColor(someColor, someColor, CV_HSV2RGB);
+		Scalar rgb = someColor.at<Vec3b>(0, 0);
+		line(src, Point(x, 10), Point(x, 19), rgb);
+	}*/
+
 	imshow("Circles", src);
 	waitKey(0);
 	return 0;
