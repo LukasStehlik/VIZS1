@@ -12,14 +12,23 @@
 using namespace cv;
 using namespace std;
 
+#define PravyUhol (CV_PI/2)
+
 int main(int argc, char** argv)
 {
+	/*VideoCapture cap;
+	if (!cap.open(0))
+	{
+		return 0;
+	}*/
 	for (int im = 0; im < 500; im++)
 	{
 		char cesta[50];
 		sprintf(cesta, "../../OpenCVTest/DataJPG/frame%d.jpg", im);
 		//cout << cesta << endl;
-		Mat src = imread(cesta, IMREAD_UNCHANGED);
+		Mat src= imread(cesta, IMREAD_UNCHANGED);
+		
+		//cap >> src;
 		//Mat src = imread("../Data/kruhy.bmp", IMREAD_UNCHANGED);
 		if (src.empty())
 		{
@@ -29,8 +38,8 @@ int main(int argc, char** argv)
 
 		Mat dst, HoughSource, HSV_Image;
 		//dst = src;
-		GaussianBlur(src, dst, Size(3, 3), 0, 0); //Rozmazáva hrany
-		medianBlur(src, dst, 5);
+		GaussianBlur(src, dst, Size(5, 5), 0, 0); //Rozmazáva hrany
+		//medianBlur(src, dst, 5);
 		cvtColor(dst, HSV_Image, CV_RGB2HSV);
 		//imshow("HSV", HSV_Image);
 
@@ -81,23 +90,26 @@ int main(int argc, char** argv)
 				}
 			}
 
-			uint H = sumH / N;
-			uint S = sumS / N;
-			uint V = sumV / N;
-			printf("H=%u S=%u V=%u\n", H, S, V);
+			if (N > 0)
+			{
+				uint H = sumH / N;
+				uint S = sumS / N;
+				uint V = sumV / N;
+				printf("H=%u S=%u V=%u\n", H, S, V);
 
-			Mat someColor = Mat(1, 1, CV_8UC3, Scalar(H, S, V));
-			cvtColor(someColor, someColor, CV_HSV2RGB);
-			Scalar rgb = someColor.at<Vec3b>(0, 0);
+				Mat someColor = Mat(1, 1, CV_8UC3, Scalar(H, S, V));
+				cvtColor(someColor, someColor, CV_HSV2RGB);
+				Scalar rgb = someColor.at<Vec3b>(0, 0);
 
-			String txtColor;
-			if (H > 100 && H < 140) txtColor = "RCircle";
-			if (H > 30 && H < 99) txtColor = "GCircle";
-			if (H < 29 || H > 150) txtColor = "BCircle";
+				String txtColor;
+				if (H > 100 && H < 140) txtColor = "RCircle";
+				if (H > 30 && H < 99) txtColor = "GCircle";
+				if (H < 29 || H > 150) txtColor = "BCircle";
 
-			// draw the circle outline
-			circle(src, center, radius, rgb, 3, 8, 0);
-			putText(src, txtColor, center, FONT_HERSHEY_PLAIN, 1.5, Scalar(0, 255, 255), 2);
+				// draw the circle outline
+				circle(src, center, radius, rgb, 3, 8, 0);
+				putText(src, txtColor, center, FONT_HERSHEY_PLAIN, 1.5, Scalar(0, 255, 255), 2);
+			}
 		}
 		//Red H->100:140
 		//Green H->30:99
@@ -121,7 +133,7 @@ int main(int argc, char** argv)
 		Canny(dst, Keny, 50, 200, 3);
 
 		vector<Vec2f> lines;
-		HoughLines(Keny, lines, 1, CV_PI / 180, 100, 0, 0);
+		HoughLines(Keny, lines, 1, CV_PI / 180, 107, 0, 0);
 		printf("Pocet ciar: %u\n", (uint16_t)lines.size());
 
 		/*for (size_t i = 0; i < lines.size(); i++)
@@ -137,6 +149,7 @@ int main(int argc, char** argv)
 			line(src, pt1, pt2, Scalar(0, 0, 255), 1, CV_AA);
 		}*/
 		vector<Point> priesecniky;
+		vector<float> uhly;
 		
 		for (uint index = 0, i = 0; i < lines.size(); i++)
 		{
@@ -148,22 +161,27 @@ int main(int argc, char** argv)
 				{
 					int x = (int)((rho1*sin(theta2) - rho2*sin(theta1)) / sin(theta2 - theta1));
 					int y = (int)((rho2*cos(theta1) - rho1*cos(theta2)) / sin(theta2 - theta1));
-					printf("x=%d\ty=%d\n", x, y);
-					circle(src, Point(x, y), 5, Scalar(0, 0, 255), 3, 8, 0);
+					//circle(src, Point(x, y), 5, Scalar(0, 0, 255), 3, 8, 0);
 					priesecniky.push_back(Point(x, y));
+					uhly.push_back(abs(theta2-theta1));
+					printf("x=%d\ty=%d\n", x, y);
 				}
 				else printf("Nema presecnik\n");
 			}
 		}
 
-		if (priesecniky.size() <= 4 && priesecniky.size() > 2)
+		if (priesecniky.size() <= 5 && priesecniky.size() > 2)
 		{
 			for (uint i = 0; i < priesecniky.size(); i++)
 			{
 				for (uint j = i + 1; j < priesecniky.size(); j++)
 				{
-					printf("i=%d\tj=%d\n", i, j);
-					line(src, priesecniky[i], priesecniky[j], Scalar(0, 0, 255),2);
+					printf("uhol=%f\t", uhly[i]);
+					if ((uhly[i] > (PravyUhol - 0.1)) && (uhly[i] < (PravyUhol + 0.1)) && (uhly[j] > (PravyUhol - 0.1)) && (uhly[j] < (PravyUhol + 0.1)))
+					{
+						printf("i=%d\tj=%d\n", i, j);
+						line(src, priesecniky[i], priesecniky[j], Scalar(0, 0, 255), 2);
+					}
 				}
 				
 			}
@@ -171,7 +189,7 @@ int main(int argc, char** argv)
 			
 
 		imshow("Lines", src);
-		if (waitKey(33) == 27) break;
+		if (waitKey(30) == 27) break;
 	}
 
 	waitKey(10);
