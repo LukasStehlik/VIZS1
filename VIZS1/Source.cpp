@@ -15,6 +15,9 @@ using namespace std;
 void Kruhy(Mat ColMat, Mat *src, String Color);
 void Objekty(Mat ColMat, Mat *src, String Color);
 void MeanLines(vector<Vec2f> lines, vector<Vec2f> *linesFiltered);
+float Sum(vector<float> x);
+Point CenterCalc(vector<Point> points);
+float Lengths(vector<Point> points, vector<float> *dlzka);
 
 #define PravyUhol 90
 
@@ -25,7 +28,7 @@ int main(int argc, char** argv)
 	{
 		return 0;
 	}*/
-	for (int im = 150; im < 500; im++)
+	for (int im = 0; im < 500; im++)
 	{
 		char cesta[50];
 		sprintf(cesta, "../../OpenCVTest/DataJPG/frame%d.jpg", im);
@@ -60,13 +63,13 @@ int main(int argc, char** argv)
 		Kruhy(Gmat, &src, "G");
 		Kruhy(Bmat, &src, "B");
 
-		//Objekty(Rmat, &src, "R");
+		Objekty(Rmat, &src, "R");
 		Objekty(Gmat, &src, "G");
-		//Objekty(Bmat, &src, "B");
+		Objekty(Bmat, &src, "B");
 
 		imshow("Detekcia", src);
 		printf("\n");
-		if (waitKey(0) == 27) break;
+		if (waitKey(30) == 27) break;
 	}
 
 	waitKey(10);
@@ -88,8 +91,8 @@ void Kruhy(Mat ColMat, Mat *src, String Color)
 
 		printf("x=%i y=%i\n", center.x, center.y);
 
-		circle(*src, center, radius, Scalar(0, 150, 150), 3, 8, 0);
-		putText(*src, Color + "Circle", center, FONT_HERSHEY_PLAIN, 1.5, Scalar(0, 255, 255), 2);
+		circle(*src, center, radius, Scalar(50, 50, 50), 3, 8, 0);
+		putText(*src, Color + "Circle", center, FONT_HERSHEY_PLAIN, 1.5, Scalar(0, 0, 0), 2);
 	}
 }
 
@@ -139,28 +142,54 @@ void Objekty(Mat ColMat, Mat *src, String Color)
 				int y = (int)((rho2*cos(theta1) - rho1*cos(theta2)) / sin(theta2 - theta1));
 				//circle(*src, Point(x, y), 5, Scalar(0, 0, 255), 3, 8, 0);
 				priesecniky.push_back(Point(x, y));
-				uhly.push_back((float)(abs(theta2-theta1)*180/CV_PI));
+				float uhol = (float)(abs(theta2 - theta1) * 180 / CV_PI);
+				uhol = uhol > 90 ? 180 - uhol : uhol;
+				uhly.push_back(uhol);
 				//printf("x=%d\ty=%d\n", x, y);
 			}
 			else printf("Nema presecnik\n");
 		}
 	}
 
-	if (priesecniky.size() <= 4 && priesecniky.size() > 2)
+	float uhlySum = Sum(uhly);
+	if (priesecniky.size() == 4 && uhlySum > 345 && uhlySum < 375)
+	{
+		vector<float> dlzky;
+		float minDlzka = Lengths(priesecniky, &dlzky);
+		float meanDlzky = Sum(dlzky)/6.82;
+
+		for (uint i = 0, index = 0; i < priesecniky.size(); i++)
+		{
+			for (uint j = i + 1; j < priesecniky.size(); j++, index++)
+			{
+				//printf("uhol=%f\t", uhly[i]);
+				//printf("i=%d\tj=%d\n", i, j);
+				if (meanDlzky < minDlzka*1.1) //Štvorec
+				{
+					if (dlzky[index]<minDlzka*1.2) line(*src, priesecniky[i], priesecniky[j], Scalar(50, 50, 50), 2);
+				}
+				else //Obdåžnik
+				{
+					if (dlzky[index]<minDlzka*1.6) line(*src, priesecniky[i], priesecniky[j], Scalar(50, 50, 50), 2);
+				}
+			}
+		}
+		if (meanDlzky < minDlzka*1.1) putText(*src, Color + "Square", CenterCalc(priesecniky), FONT_HERSHEY_PLAIN, 1.5, Scalar(0, 0, 0), 2);
+		else putText(*src, Color + "Rectangle", CenterCalc(priesecniky), FONT_HERSHEY_PLAIN, 1.5, Scalar(0, 0, 0), 2);
+	}
+
+	if (priesecniky.size() == 3 && uhlySum > 165 && uhlySum < 195)
 	{
 		for (uint i = 0; i < priesecniky.size(); i++)
 		{
 			for (uint j = i + 1; j < priesecniky.size(); j++)
 			{
-				printf("uhol=%f\t", uhly[i]);
-				if ((uhly[i] > (PravyUhol - 5)) && (uhly[i] < (PravyUhol + 5)) && (uhly[j] > (PravyUhol - 5)) && (uhly[j] < (PravyUhol + 5)))
-				{
-					printf("i=%d\tj=%d\n", i, j);
-					line(*src, priesecniky[i], priesecniky[j], Scalar(0, 0, 255), 2);
-				}
+				//printf("uhol=%f\t", uhly[i]);
+				//printf("i=%d\tj=%d\n", i, j);
+				line(*src, priesecniky[i], priesecniky[j], Scalar(50, 50, 50), 2);
 			}
-
 		}
+		putText(*src, Color + "Triangle", CenterCalc(priesecniky), FONT_HERSHEY_PLAIN, 1.5, Scalar(0, 0, 0), 2);
 	}
 }
 
@@ -177,7 +206,7 @@ void MeanLines(vector<Vec2f> lines, vector<Vec2f> *linesFiltered)
 			rho = abs(rho);
 			theta -= (float)CV_PI;
 		}
-		if (theta < 0) theta += (float)CV_PI;
+		//if (theta < 0) theta += (float)CV_PI;
 
 		for (uint j = 0; j <= (*linesFiltered).size(); j++)
 		{
@@ -206,4 +235,43 @@ void MeanLines(vector<Vec2f> lines, vector<Vec2f> *linesFiltered)
 		(*linesFiltered)[i][0] /= pocetnost[i];
 		(*linesFiltered)[i][1] /= pocetnost[i];
 	}
+}
+
+float Sum(vector<float> x)
+{
+	float sum = 0;
+	for (uint i = 0; i < x.size(); i++) sum += abs(x[i]);
+	return sum;
+}
+
+Point CenterCalc(vector<Point> points)
+{
+	Point center = Point(0, 0);
+
+	for (uint i = 0; i < points.size(); i++)
+	{
+		center.x += points[i].x;
+		center.y += points[i].y;
+	}
+	center.x /= (int)points.size();
+	center.y /= (int)points.size();
+	return center;
+}
+
+float Lengths(vector<Point> points, vector<float> *dlzka)
+{
+	for (uint i = 0; i < points.size(); i++)
+	{
+		for (uint j = i + 1; j < points.size(); j++)
+		{
+			float l = (float)sqrt(pow(points[i].x - points[j].x, 2) + pow(points[i].y - points[j].y, 2));
+			(*dlzka).push_back(l);
+		}
+	}
+	float minDlzka = (*dlzka)[0];
+	for (uint i = 1; i < (*dlzka).size(); i++)
+	{
+		if ((*dlzka)[i] < minDlzka) minDlzka = (*dlzka)[i];
+	}
+	return minDlzka;
 }
