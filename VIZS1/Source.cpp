@@ -18,13 +18,17 @@ void MeanLines(vector<Vec2f> lines, vector<Vec2f> *linesFiltered);
 float Sum(vector<float> x);
 Point CenterCalc(vector<Point> points);
 float Lengths(vector<Point> points, vector<float> *dlzka);
+uint PocetObjektov(Mat mat);
+void ClearObject(Mat *mat, uchar revers);
 
 #define PravyUhol 90
+
+RNG rng(12345);
 
 int main(int argc, char** argv)
 {
 	/*VideoCapture cap;
-	if (!cap.open(0))
+	if (!cap.open(1))
 	{
 		return 0;
 	}*/
@@ -46,7 +50,7 @@ int main(int argc, char** argv)
 		//medianBlur(AFilter, AFilter, 5);
 		cvtColor(AFilter, HSV_Image, CV_BGR2HSV);
 
-		inRange(HSV_Image, Scalar(100, 100, 20),Scalar(140,255,255),Bmat);
+		inRange(HSV_Image, Scalar(100, 100, 20), Scalar(140, 255, 255), Bmat);
 		inRange(HSV_Image, Scalar(20, 100, 20), Scalar(95, 255, 255), Gmat);
 		inRange(HSV_Image, Scalar(0, 100, 20), Scalar(15, 255, 255), Rmat);
 		inRange(HSV_Image, Scalar(160, 100, 20), Scalar(180, 255, 255), Temp);
@@ -55,17 +59,70 @@ int main(int argc, char** argv)
 		GaussianBlur(Rmat, Rmat, Size(5, 5), 3, 3);
 		GaussianBlur(Gmat, Gmat, Size(5, 5), 3, 3);
 		GaussianBlur(Bmat, Bmat, Size(5, 5), 3, 3);
+
 		//imshow("Rmat", Rmat);
 		//imshow("Gmat", Gmat);
 		//imshow("Bmat", Bmat);
 
-		Kruhy(Rmat, &src, "R");
+		
 		Kruhy(Gmat, &src, "G");
-		Kruhy(Bmat, &src, "B");
 
-		Objekty(Rmat, &src, "R");
-		Objekty(Gmat, &src, "G");
-		Objekty(Bmat, &src, "B");
+		// U-Rampa
+		Mat Segm;
+		if (PocetObjektov(Rmat) == 1) //Red
+		{
+			Objekty(Rmat, &src, "R");
+			Kruhy(Rmat, &src, "R");
+		}
+		else
+		{
+			Segm = Rmat.clone();
+			ClearObject(&Segm, 0);
+			Objekty(Segm, &src, "R");
+			Kruhy(Rmat, &src, "R");
+
+			Segm = Rmat.clone();
+			ClearObject(&Segm, 1);
+			Objekty(Segm, &src, "R");
+			Kruhy(Rmat, &src, "R");
+		}
+
+		if (PocetObjektov(Gmat) == 1) //Green
+		{
+			Objekty(Gmat, &src, "G");
+			Kruhy(Gmat, &src, "G");
+		}
+		else
+		{
+			Segm = Gmat.clone();
+			ClearObject(&Segm, 0);
+			Objekty(Segm, &src, "G");
+			Kruhy(Gmat, &src, "G");
+
+			Segm = Gmat.clone();
+			ClearObject(&Segm, 1);
+			Objekty(Segm, &src, "G");
+			Kruhy(Gmat, &src, "G");
+		}
+
+		if (PocetObjektov(Bmat) == 1) //Blue
+		{
+			Objekty(Bmat, &src, "B");
+			Kruhy(Bmat, &src, "B");
+		}
+		else
+		{
+			Segm = Bmat.clone();
+			ClearObject(&Segm, 0);
+			Objekty(Segm, &src, "B");
+			Kruhy(Bmat, &src, "B");
+
+			Segm = Bmat.clone();
+			ClearObject(&Segm, 1);
+			Objekty(Segm, &src, "B");
+			Kruhy(Bmat, &src, "B");
+		}
+		// Koniec U-Rampy
 
 		imshow("Detekcia", src);
 		printf("\n");
@@ -80,11 +137,11 @@ int main(int argc, char** argv)
 void Kruhy(Mat ColMat, Mat *src, String Color)
 {
 	vector<Vec3f> circles;
-	HoughCircles(ColMat, circles, HOUGH_GRADIENT, 2, ColMat.rows / 4, 200, 100, 0, 0);
+	HoughCircles(ColMat, circles, HOUGH_GRADIENT, 2, ColMat.rows / 4, 50, 50, 50, 150);
 
 	printf("Pocet kruhov: %u\n", (uint16_t)circles.size());
 
-	for (size_t i = 0; i < circles.size(); i++)
+	for (size_t i = 0; i < circles.size() && i < 2; i++)
 	{
 		Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
 		int radius = cvRound(circles[i][2]);
@@ -107,12 +164,12 @@ void Objekty(Mat ColMat, Mat *src, String Color)
 	printf("Pocet ciar: %u\n", (uint16_t)lines.size());
 
 	//Vypísanie lines
-	for (uint i = 0; i < lines.size(); i++)
+	/*for (uint i = 0; i < lines.size(); i++)
 	{
 		float rho = lines[i][0], theta = lines[i][1];
 		printf("rho=%.2f\ttheta=%.2f\n", rho, theta);
 	}
-	printf("\n");
+	printf("\n");*/
 
 	vector<Vec2f> linesFiltered;
 	MeanLines(lines, &linesFiltered);
@@ -120,12 +177,12 @@ void Objekty(Mat ColMat, Mat *src, String Color)
 	printf("Pocet ciar filtrovanych: %u\n", (uint16_t)linesFiltered.size());
 	
 	//Vypísanie lines filtrovaných
-	for (uint i = 0; i < linesFiltered.size(); i++)
+	/*for (uint i = 0; i < linesFiltered.size(); i++)
 	{
 		float rho = linesFiltered[i][0], theta = linesFiltered[i][1];
 		printf("rho=%.2f\ttheta=%.2f\n", rho, theta);
 	}
-	printf("\n");
+	printf("\n");*/
 
 	vector<Point> priesecniky;
 	vector<float> uhly;
@@ -156,7 +213,7 @@ void Objekty(Mat ColMat, Mat *src, String Color)
 	{
 		vector<float> dlzky;
 		float minDlzka = Lengths(priesecniky, &dlzky);
-		float meanDlzky = Sum(dlzky)/6.82;
+		float meanDlzky = (float)(Sum(dlzky)/6.82);
 
 		for (uint i = 0, index = 0; i < priesecniky.size(); i++)
 		{
@@ -274,4 +331,63 @@ float Lengths(vector<Point> points, vector<float> *dlzka)
 		if ((*dlzka)[i] < minDlzka) minDlzka = (*dlzka)[i];
 	}
 	return minDlzka;
+}
+
+uint PocetObjektov(Mat mat)
+{
+	uint NoWhite = 0;
+	uint PocetObjektov = 0;
+	for (int i = 0; i < mat.rows; i++)
+	{
+		uint NoW = 0;
+		for (int j = 0; j < mat.cols; j++)
+		{
+			if (mat.at<uchar>(i, j) > 0)
+			{
+				NoW++;
+			}
+		}
+		if (NoW == 0 && NoWhite > NoW) PocetObjektov++;
+		NoWhite = NoW;
+	}
+	return PocetObjektov;
+}
+
+void ClearObject(Mat *mat, uchar revers)
+{
+	uint NoWhite = 0;
+	if (revers == 0)
+	{
+		for (int i = 0; i < (*mat).rows; i++)
+		{
+			uint NoW = 0;
+			for (int j = 0; j < (*mat).cols; j++)
+			{
+				if ((*mat).at<uchar>(i, j) > 0)
+				{
+					(*mat).at<uchar>(i, j) = 0;
+					NoW++;
+				}
+			}
+			if (NoW == 0 && NoWhite > NoW) break;
+			NoWhite = NoW;
+		}
+	}
+	else
+	{
+		for (int i = (*mat).rows-1; i >= 0; i--)
+		{
+			uint NoW = 0;
+			for (int j = (*mat).cols-1; j >= 0; j--)
+				{
+					if ((*mat).at<uchar>(i, j) > 0)
+					{
+						(*mat).at<uchar>(i, j) = 0;
+						NoW++;
+					}
+				}
+			if (NoW == 0 && NoWhite > NoW) break;
+			NoWhite = NoW;
+		}
+	}
 }
