@@ -32,7 +32,7 @@ int main(int argc, char** argv)
 	{
 		return 0;
 	}*/
-	for (int im = 0; im < 500; im++)
+	for (int im = 350; im < 500; im++)
 	{
 		char cesta[50];
 		sprintf(cesta, "../../OpenCVTest/DataJPG/frame%d.jpg", im);
@@ -56,6 +56,7 @@ int main(int argc, char** argv)
 		inRange(HSV_Image, Scalar(160, 100, 20), Scalar(180, 255, 255), Temp);
 		addWeighted(Rmat, 1.0, Temp, 1.0, 0.0, Rmat);
 
+		//Zlepšenie detekcie kruhov pri použití filtra na binárny obraz
 		GaussianBlur(Rmat, Rmat, Size(5, 5), 3, 3);
 		GaussianBlur(Gmat, Gmat, Size(5, 5), 3, 3);
 		GaussianBlur(Bmat, Bmat, Size(5, 5), 3, 3);
@@ -64,10 +65,7 @@ int main(int argc, char** argv)
 		//imshow("Gmat", Gmat);
 		//imshow("Bmat", Bmat);
 
-		
-		Kruhy(Gmat, &src, "G");
-
-		// U-Rampa
+		//Detekcia objektov
 		Mat Segm;
 		if (PocetObjektov(Rmat) == 1) //Red
 		{
@@ -122,7 +120,6 @@ int main(int argc, char** argv)
 			Objekty(Segm, &src, "B");
 			Kruhy(Bmat, &src, "B");
 		}
-		// Koniec U-Rampy
 
 		imshow("Detekcia", src);
 		printf("\n");
@@ -139,14 +136,14 @@ void Kruhy(Mat ColMat, Mat *src, String Color)
 	vector<Vec3f> circles;
 	HoughCircles(ColMat, circles, HOUGH_GRADIENT, 2, ColMat.rows / 4, 50, 50, 50, 150);
 
-	printf("Pocet kruhov: %u\n", (uint16_t)circles.size());
+	//printf("Pocet kruhov: %u\n", (uint16_t)circles.size());
 
 	for (size_t i = 0; i < circles.size() && i < 2; i++)
 	{
 		Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
 		int radius = cvRound(circles[i][2]);
 
-		printf("x=%i y=%i\n", center.x, center.y);
+		//printf("x=%i y=%i\n", center.x, center.y);
 
 		circle(*src, center, radius, Scalar(50, 50, 50), 3, 8, 0);
 		putText(*src, Color + "Circle", center, FONT_HERSHEY_PLAIN, 1.5, Scalar(0, 0, 0), 2);
@@ -161,7 +158,7 @@ void Objekty(Mat ColMat, Mat *src, String Color)
 
 	vector<Vec2f> lines;
 	HoughLines(Keny, lines, 1, CV_PI / 180, 50, 0, 0);
-	printf("Pocet ciar: %u\n", (uint16_t)lines.size());
+	//printf("Pocet ciar: %u\n", (uint16_t)lines.size());
 
 	//Vypísanie lines
 	/*for (uint i = 0; i < lines.size(); i++)
@@ -174,7 +171,7 @@ void Objekty(Mat ColMat, Mat *src, String Color)
 	vector<Vec2f> linesFiltered;
 	MeanLines(lines, &linesFiltered);
 
-	printf("Pocet ciar filtrovanych: %u\n", (uint16_t)linesFiltered.size());
+	//printf("Pocet ciar filtrovanych: %u\n", (uint16_t)linesFiltered.size());
 	
 	//Vypísanie lines filtrovaných
 	/*for (uint i = 0; i < linesFiltered.size(); i++)
@@ -187,6 +184,7 @@ void Objekty(Mat ColMat, Mat *src, String Color)
 	vector<Point> priesecniky;
 	vector<float> uhly;
 
+	//H¾adanie prieseèníkov èiar
 	for (uint i = 0; i < linesFiltered.size(); i++)
 	{
 		for (uint j = i + 1; j < linesFiltered.size(); j++)
@@ -204,7 +202,7 @@ void Objekty(Mat ColMat, Mat *src, String Color)
 				uhly.push_back(uhol);
 				//printf("x=%d\ty=%d\n", x, y);
 			}
-			else printf("Nema presecnik\n");
+			//else printf("Nema presecnik\n");
 		}
 	}
 

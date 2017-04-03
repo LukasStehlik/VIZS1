@@ -2,7 +2,7 @@
   Generating code
   10 of 436 functions ( 2.3%) were compiled, the rest were copied from previous compilation.
     0 functions were new in current compilation
-    3 functions had inline decision re-evaluated but remain unchanged
+    0 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   VIZS1.vcxproj -> C:\Users\Lukáš\Documents\Visual Studio 2015\Projects\VIZS1\x64\Release\VIZS1.exe
   VIZS1.vcxproj -> C:\Users\Lukáš\Documents\Visual Studio 2015\Projects\VIZS1\x64\Release\VIZS1.pdb (Full PDB)
